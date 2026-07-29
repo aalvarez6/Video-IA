@@ -1,4 +1,4 @@
-# ALTO MONTE · Motor de guion & prompt para video IA
+ Motor de guion & prompt para video IA
 
 App web para pasar de un **brief** a un **guion escena por escena** y a un **prompt optimizado**
 listo para pegar en tu motor de video IA (Sora, Veo 3, Runway, Kling, Pika, Luma, Hailuo, Oreate).
