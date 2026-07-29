@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ALTO MONTE · Motor de Guion & Prompt para Video IA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#080B0A;
+    --bg-2:#0B0F0D;
+    --surface:#0F1513;
+    --surface-2:#141C19;
+    --raised:#18211D;
+    --line:#24312B;
+    --line-soft:#1a231f;
+    --text:#EAF1ED;
+    --muted:#7E8C85;
+    --muted-2:#576159;
+    --green:#3FE0A0;      /* energía */
+    --green-dim:#2b9e72;
+    --amber:#F4B44C;      /* amanecer en la cumbre */
+    --amber-dim:#b3823a;
+    --danger:#e8886a;
+    --r:14px;
+    --r-sm:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Inter",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  /* ---------- contornos topográficos de fondo ---------- */
+  .topo{
+    position:fixed;inset:0;z-index:0;pointer-events:none;
+    opacity:.5;
+  }
+  .topo svg{width:100%;height:100%}
+  .topo path{fill:none;stroke:var(--line);stroke-width:1;}
+  .glow{
+    position:fixed;z-index:0;pointer-events:none;filter:blur(90px);opacity:.22;
+  }
+  .glow.a{top:-160px;right:-120px;width:460px;height:460px;border-radius:50%;
+    background:radial-gradient(circle,var(--green),transparent 68%);}
+  .glow.b{bottom:-180px;left:-140px;width:520px;height:520px;border-radius:50%;
+    background:radial-gradient(circle,var(--amber),transparent 70%);opacity:.14;}
+
+  .wrap{position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:0 22px 80px}
+
+  /* ---------- top bar ---------- */
+  header.top{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:22px 2px 26px;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .mark{width:34px;height:34px;flex:none}
+  .brand-name{
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:800;
+    letter-spacing:.14em;font-size:16px;text-transform:uppercase;
+  }
+  .brand-name span{color:var(--green)}
+  .brand-sub{font-size:11px;color:var(--muted);letter-spacing:.06em;margin-top:1px}
+  .top-tag{
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);
+    border:1px solid var(--line);padding:6px 11px;border-radius:100px;white-space:nowrap;
+  }
+  .top-tag b{color:var(--amber);font-weight:500}
+
+  /* ---------- hero line ---------- */
+  .hero{margin:6px 2px 30px}
+  .hero h1{
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:700;
+    font-size:clamp(28px,4.4vw,46px);line-height:1.02;letter-spacing:-.02em;margin:0 0 12px;
+    max-width:20ch;
+  }
+  .hero h1 .u{
+    background:linear-gradient(100deg,var(--green),var(--amber));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero p{color:var(--muted);max-width:56ch;font-size:15px;margin:0}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:388px 1fr;gap:22px;align-items:start}
+  @media(max-width:900px){.grid{grid-template-columns:1fr}}
+
+  .panel{
+    background:linear-gradient(180deg,var(--surface),var(--bg-2));
+    border:1px solid var(--line);border-radius:var(--r);
+  }
+  .panel-head{
+    display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line-soft);
+  }
+  .panel-head .idx{
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--green);
+    border:1px solid var(--line);border-radius:6px;padding:2px 7px;
+  }
+  .panel-head h2{
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:14px;
+    letter-spacing:.04em;text-transform:uppercase;margin:0;
+  }
+
+  /* ---------- form ---------- */
+  form{padding:18px}
+  .field{margin-bottom:16px}
+  .field:last-child{margin-bottom:0}
+  label.lbl{
+    display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:7px;font-weight:600;
+  }
+  input[type=text],textarea,select{
+    width:100%;background:var(--bg);color:var(--text);
+    border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:11px 12px;font-family:inherit;font-size:14px;transition:border-color .15s,box-shadow .15s;
+  }
+  textarea{resize:vertical;min-height:78px;line-height:1.45}
+  select{appearance:none;cursor:pointer;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237E8C85' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+  input:focus,textarea:focus,select:focus{
+    outline:none;border-color:var(--green-dim);box-shadow:0 0 0 3px rgba(63,224,160,.12);
+  }
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px}
+  .chip{
+    font-size:12.5px;padding:7px 12px;border-radius:100px;cursor:pointer;
+    border:1px solid var(--line);color:var(--muted);background:transparent;transition:.15s;user-select:none;
+  }
+  .chip:hover{border-color:var(--green-dim);color:var(--text)}
+  .chip.on{border-color:var(--green);color:var(--bg);background:var(--green);font-weight:600}
+
+  .toggles{display:flex;flex-direction:column;gap:2px}
+  .tg{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .tg:last-child{border-bottom:none}
+  .tg span{font-size:13.5px;color:var(--text)}
+  .switch{position:relative;width:40px;height:22px;flex:none}
+  .switch input{opacity:0;width:0;height:0;position:absolute}
+  .slider{position:absolute;inset:0;background:var(--raised);border:1px solid var(--line);
+    border-radius:100px;cursor:pointer;transition:.18s}
+  .slider::before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;
+    background:var(--muted);border-radius:50%;transition:.18s}
+  .switch input:checked + .slider{background:rgba(63,224,160,.18);border-color:var(--green-dim)}
+  .switch input:checked + .slider::before{transform:translateX(18px);background:var(--green)}
+  .switch input:focus-visible + .slider{box-shadow:0 0 0 3px rgba(63,224,160,.2)}
+
+  .palette{display:flex;gap:12px}
+  .sw{display:flex;flex-direction:column;gap:6px;align-items:center;font-size:10px;color:var(--muted)}
+  .sw input[type=color]{width:44px;height:34px;padding:0;border:1px solid var(--line);
+    border-radius:8px;background:none;cursor:pointer}
+  .sw input[type=color]::-webkit-color-swatch-wrapper{padding:3px}
+  .sw input[type=color]::-webkit-color-swatch{border:none;border-radius:5px}
+
+  .generate{
+    width:100%;margin-top:20px;padding:14px;border:none;border-radius:var(--r-sm);cursor:pointer;
+    font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:14px;letter-spacing:.04em;
+    color:var(--bg);background:linear-gradient(100deg,var(--green),var(--amber));
+    transition:filter .15s,transform .05s;
+  }
+  .generate:hover{filter:brightness(1.06)}
+  .generate:active{transform:translateY(1px)}
+
+  /* ---------- output ---------- */
+  .tabs{display:flex;gap:4px;padding:14px 18px 0}
+  .tab{
+    font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.03em;
+    padding:9px 14px;border-radius:9px 9px 0 0;cursor:pointer;color:var(--muted);
+    border:1px solid transparent;border-bottom:none;background:transparent;transition:.15s;
+  }
+  .tab:hover{color:var(--text)}
+  .tab.on{color:var(--text);background:var(--surface-2);border-color:var(--line-soft)}
+  .out-body{padding:18px;border-top:1px solid var(--line-soft)}
+
+  .meta{
+    display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;
+  }
+  .meta .pill{
+    font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--muted);
+    border:1px solid var(--line);border-radius:7px;padding:5px 9px;
+  }
+  .meta .pill b{color:var(--text);font-weight:500}
+
+  /* timeline de escenas */
+  .timeline{position:relative;margin-left:6px}
+  .timeline::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:1px;
+    background:linear-gradient(180deg,var(--green),var(--amber));opacity:.5}
+  .scene{position:relative;padding:0 0 20px 26px}
+  .scene:last-child{padding-bottom:0}
+  .scene::before{content:"";position:absolute;left:-3.5px;top:5px;width:8px;height:8px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--green);box-shadow:0 0 0 3px var(--bg)}
+  .scene .s-head{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .s-no{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--green);font-weight:700}
+  .s-beat{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:14px}
+  .s-dur{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--amber);margin-left:auto}
+  .s-desc{font-size:14px;color:var(--text);margin:0 0 10px}
+  .s-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 18px}
+  @media(max-width:520px){.s-grid{grid-template-columns:1fr}}
+  .s-row{font-size:12.5px;color:var(--muted);display:flex;gap:7px}
+  .s-row .k{color:var(--muted-2);font-family:"JetBrains Mono",monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.05em;min-width:64px;padding-top:1px}
+  .s-row .v{color:var(--text)}
+
+  /* prompt */
+  .prompt-note{
+    font-size:12.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line-soft);
+    border-left:2px solid var(--amber);border-radius:8px;padding:10px 12px;margin-bottom:14px;
+  }
+  pre.code{
+    background:var(--bg);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:15px;overflow-x:auto;font-family:"JetBrains Mono",monospace;font-size:12.5px;
+    line-height:1.6;color:#cfe6db;white-space:pre-wrap;word-break:break-word;margin:0;
+  }
+  .code b{color:var(--green);font-weight:500}
+  .code .cm{color:var(--muted-2)}
+
+  .actions{display:flex;gap:9px;margin-top:14px;flex-wrap:wrap}
+  .btn{
+    font-family:"JetBrains Mono",monospace;font-size:12px;cursor:pointer;
+    padding:9px 14px;border-radius:9px;border:1px solid var(--line);background:var(--raised);
+    color:var(--text);transition:.15s;display:inline-flex;align-items:center;gap:7px;
+  }
+  .btn:hover{border-color:var(--green-dim);color:var(--green)}
+  .btn.copied{border-color:var(--green);color:var(--green)}
+
+  .empty{text-align:center;color:var(--muted);padding:48px 20px}
+  .empty svg{opacity:.5;margin-bottom:14px}
+  .empty p{margin:0;font-size:14px}
+
+  footer{margin-top:34px;text-align:center;color:var(--muted-2);font-size:11.5px;
+    font-family:"JetBrains Mono",monospace;letter-spacing:.03em}
+
+  :focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:4px}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .rise{animation:rise .4s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+  <div class="topo" aria-hidden="true">
+    <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+      <path d="M-40 210 C 220 120, 420 300, 640 220 S 1020 120, 1260 250"/>
+      <path d="M-40 280 C 220 190, 420 370, 640 290 S 1020 190, 1260 320"/>
+      <path d="M-40 360 C 240 260, 430 470, 660 370 S 1030 270, 1260 410"/>
+      <path d="M-40 470 C 240 360, 460 590, 680 470 S 1050 360, 1260 520"/>
+      <path d="M-40 590 C 260 470, 480 720, 700 590 S 1070 470, 1260 640"/>
+      <path d="M-40 140 C 260 80, 400 210, 620 150 S 1000 70, 1260 180"/>
+    </svg>
+  </div>
+  <div class="glow a" aria-hidden="true"></div>
+  <div class="glow b" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <path d="M4 32 L15 12 L21 22 L26 14 L36 32 Z" stroke="url(#g)" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M15 12 L18.5 18" stroke="url(#g)" stroke-width="2" stroke-linecap="round" opacity=".6"/>
+          <circle cx="26" cy="14" r="2.4" fill="#F4B44C"/>
+          <defs><linearGradient id="g" x1="4" y1="32" x2="36" y2="12" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#3FE0A0"/><stop offset="1" stop-color="#F4B44C"/></linearGradient></defs>
+        </svg>
+        <div>
+          <div class="brand-name">ALTO <span>MONTE</span></div>
+          <div class="brand-sub">Motor de guion & prompt para video IA</div>
+        </div>
+      </div>
+      <div class="top-tag">30s&ndash;5min · IG + LinkedIn · listo para <b>desplegar</b></div>
+    </header>
+
+    <section class="hero">
+      <h1>Del brief a la <span class="u">escena por escena</span> y al prompt listo para tu IA de video.</h1>
+      <p>Escribe el concepto del lanzamiento, ajusta duración, formato y motor, y obtén un guion técnico y un prompt optimizado para pegar en Sora, Veo, Runway, Kling y más.</p>
+    </section>
+
+    <div class="grid">
+      <!-- ---------------- BRIEF ---------------- -->
+      <div class="panel">
+        <div class="panel-head"><span class="idx">01</span><h2>Brief</h2></div>
+        <form id="form" autocomplete="off">
+          <div class="field">
+            <label class="lbl" for="concepto">Concepto del video</label>
+            <textarea id="concepto">Lanzamiento de ALTO MONTE, la nueva compañía de energía renovable que lleva electricidad limpia desde las montañas hasta las ciudades.</textarea>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="lbl" for="tipo">Tipo</label>
+              <select id="tipo">
+                <option value="lanzamiento" selected>Lanzamiento</option>
+                <option value="brand">Brand story</option>
+                <option value="producto">Producto / servicio</option>
+                <option value="institucional">Institucional</option>
+                <option value="reclutamiento">Reclutamiento</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl" for="duracion">Duración</label>
+              <select id="duracion">
+                <option value="30">30 s</option>
+                <option value="60" selected>60 s</option>
+                <option value="90">90 s</option>
+                <option value="120">2 min</option>
+                <option value="180">3 min</option>
+                <option value="300">5 min</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl" for="formato">Formato / plataforma</label>
+            <select id="formato">
+              <option value="9:16" data-plat="Instagram Reels / Stories" selected>Vertical 9:16 · IG Reels/Stories</option>
+              <option value="1:1" data-plat="IG Feed / LinkedIn">Cuadrado 1:1 · IG Feed / LinkedIn</option>
+              <option value="16:9" data-plat="LinkedIn / YouTube">Horizontal 16:9 · LinkedIn / YouTube</option>
+              <option value="4:5" data-plat="IG Feed vertical">Vertical 4:5 · IG Feed</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="lbl">Estilo</label>
+            <div class="chips" id="estilo">
+              <button type="button" class="chip on" data-v="cinematografico">Cinematográfico</button>
+              <button type="button" class="chip" data-v="corporativo">Corporativo limpio</button>
+              <button type="button" class="chip" data-v="energetico">Energético</button>
+              <button type="button" class="chip" data-v="minimalista">Minimalista</button>
+              <button type="button" class="chip" data-v="documental">Documental</button>
+              <button type="button" class="chip" data-v="premium">Premium</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="lbl" for="motor">Motor de IA</label>
+              <select id="motor">
+                <option value="sora">Sora 2</option>
+                <option value="veo">Google Veo 3</option>
+                <option value="runway">Runway Gen-4</option>
+                <option value="kling">Kling 2</option>
+                <option value="pika">Pika</option>
+                <option value="luma">Luma Ray</option>
+                <option value="hailuo">Hailuo</option>
+                <option value="oreate">Oreate AI</option>
+              </select>
+            </div>
+            <div class="field">
+              <label class="lbl" for="idioma">Idioma</label>
+              <select id="idioma">
+                <option value="es" selected>Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">Audio y texto</label>
+            <div class="toggles">
+              <div class="tg"><span>Locución (voz en off)</span>
+                <label class="switch"><input type="checkbox" id="tgVoz" checked><span class="slider"></span></label></div>
+              <div class="tg"><span>Música de fondo</span>
+                <label class="switch"><input type="checkbox" id="tgMus" checked><span class="slider"></span></label></div>
+              <div class="tg"><span>Texto en pantalla</span>
+                <label class="switch"><input type="checkbox" id="tgTxt" checked><span class="slider"></span></label></div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="field">
+              <label class="lbl" for="marca">Marca</label>
+              <input type="text" id="marca" value="ALTO MONTE">
+            </div>
+            <div class="field">
+              <label class="lbl" for="tagline">Tagline</label>
+              <input type="text" id="tagline" value="Energía que nace de las alturas">
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="lbl">Paleta de marca</label>
+            <div class="palette">
+              <div class="sw"><input type="color" id="c1" value="#3FE0A0"><span>Energía</span></div>
+              <div class="sw"><input type="color" id="c2" value="#F4B44C"><span>Amanecer</span></div>
+              <div class="sw"><input type="color" id="c3" value="#080B0A"><span>Base</span></div>
+            </div>
+          </div>
+
+          <button type="submit" class="generate">Generar guion + prompt</button>
+        </form>
+      </div>
+
+      <!-- ---------------- OUTPUT ---------------- -->
+      <div class="panel">
+        <div class="panel-head"><span class="idx">02</span><h2>Resultado</h2></div>
+        <div class="tabs">
+          <button class="tab on" data-tab="guion">Guion por escenas</button>
+          <button class="tab" data-tab="prompt">Prompt IA</button>
+        </div>
+        <div class="out-body">
+          <div id="tab-guion">
+            <div class="empty">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#3FE0A0" stroke-width="1.3"><path d="M3 19l6-10 4 6 3-4 5 8z"/><circle cx="16" cy="6" r="1.6"/></svg>
+              <p>Genera el brief para ver el desglose escena por escena.</p>
+            </div>
+          </div>
+          <div id="tab-prompt" style="display:none">
+            <div class="empty">
+              <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#F4B44C" stroke-width="1.3"><path d="M8 9l-3 3 3 3M16 9l3 3-3 3M13 6l-2 12"/></svg>
+              <p>Aquí aparecerá el prompt listo para copiar en tu motor de IA.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>ALTO MONTE · generador de guion &amp; prompt · funciona 100% en tu navegador, sin cuentas ni servidores</footer>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = s => document.querySelector(s);
+
+  /* ---------- estado ---------- */
+  let estilo = "cinematografico";
+  document.querySelectorAll("#estilo .chip").forEach(c=>{
+    c.addEventListener("click",()=>{
+      document.querySelectorAll("#estilo .chip").forEach(x=>x.classList.remove("on"));
+      c.classList.add("on"); estilo = c.dataset.v;
+    });
+  });
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.addEventListener("click",()=>{
+      document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+      t.classList.add("on");
+      const on = t.dataset.tab;
+      $("#tab-guion").style.display = on==="guion"?"":"none";
+      $("#tab-prompt").style.display = on==="prompt"?"":"none";
+    });
+  });
+
+  /* ---------- librería creativa (sector energía) ---------- */
+  const BEATS = {
+    lanzamiento:["hook","contexto","marca","diferencial","demostracion","impacto","cierre"],
+    brand:["hook","origen","valores","diferencial","impacto","impacto","cierre"],
+    producto:["hook","problema","marca","diferencial","demostracion","demostracion","cierre"],
+    institucional:["hook","contexto","valores","diferencial","impacto","impacto","cierre"],
+    reclutamiento:["hook","cultura","valores","diferencial","impacto","impacto","cierre"]
+  };
+  const BEAT_LABEL = {hook:"Apertura",contexto:"Contexto",problema:"Problema",origen:"Origen",
+    cultura:"Cultura",valores:"Valores",marca:"Revelación de marca",diferencial:"Diferencial",
+    demostracion:"Demostración",impacto:"Impacto",cierre:"Cierre / CTA"};
+  const EXPAND = ["diferencial","demostracion","impacto","valores"]; // beats que se repiten al alargar
+  const KEEP   = ["hook","marca","diferencial","cierre"];            // beats que se conservan al acortar
+
+  const SHOT = {hook:"Aéreo",contexto:"Plano general",problema:"Plano general",origen:"Plano general",
+    cultura:"Plano medio",valores:"Plano medio",marca:"Plano general",diferencial:"Plano medio",
+    demostracion:"Detalle / Primer plano",impacto:"Plano general",cierre:"Logo / Cierre"};
+
+  const VISUAL_ES = {
+    hook:["primer rayo de sol asomando sobre una cordillera nevada, la luz recorre la ladera",
+          "plano cenital de un valle andino al amanecer, niebla baja desplazándose lentamente",
+          "siluetas de aerogeneradores girando contra un cielo que pasa de púrpura a dorado"],
+    contexto:["una ciudad despertando, las luces se encienden calle por calle al anochecer",
+          "torres de alta tensión cruzando un valle inmenso hacia el horizonte",
+          "carreteras y hogares vistos desde el aire, latiendo con energía nocturna"],
+    problema:["luces de una ciudad parpadeando y apagándose, tensión de un apagón",
+          "humo de una central antigua contrastando con montañas limpias al fondo"],
+    origen:["manos sosteniendo agua cristalina de un deshielo de montaña",
+          "amanecer sobre la cumbre, la primera luz como metáfora del origen"],
+    cultura:["equipo diverso de ingenieros compartiendo un plano en campo abierto",
+          "técnicos chocando puños tras completar una instalación en la montaña"],
+    valores:["ingeniera observando el horizonte con seguridad, viento moviendo su cabello",
+          "detalle de una mano ajustando un panel con precisión, reflejo del cielo"],
+    marca:["una represa hidroeléctrica liberando agua, el vapor atrapa la luz dorada",
+          "campo de paneles solares extendiéndose hasta la montaña, reflejando el cielo",
+          "gran plano de un parque eólico en una meseta, palas girando en sincronía"],
+    diferencial:["ingeniera con tablet frente a un aerogenerador, revisa datos en tiempo real",
+          "sala de control moderna, pantallas con mapas de energía y flujos en verde",
+          "técnico ascendiendo una turbina, plano heroico a contraluz del amanecer"],
+    demostracion:["agua precipitándose por la tubería de presión, energía cinética pura",
+          "palas de turbina girando en primer plano con destellos de sol entre ellas",
+          "flujo de energía animado viajando desde la montaña hasta los hogares"],
+    impacto:["una familia enciende la luz de su hogar al anochecer, calidez y seguridad",
+          "niños jugando en la plaza de un pueblo iluminado al pie de la montaña",
+          "plano aéreo de una comunidad conectada, luces cálidas puntuando el valle"],
+    cierre:["el logotipo de la marca se forma sobre la cumbre iluminada por el amanecer",
+          "el tagline aparece sobre un plano aéreo majestuoso de la cordillera al alba"]
+  };
+  const VISUAL_EN = {
+    hook:["first sunrise light cresting a snow-capped mountain range, light sweeping down the slope",
+          "top-down aerial of an Andean valley at dawn, low fog drifting slowly",
+          "silhouettes of wind turbines spinning against a sky shifting from purple to gold"],
+    contexto:["a city waking up, lights switching on street by street at dusk",
+          "high-voltage transmission towers crossing a vast valley toward the horizon",
+          "roads and homes seen from above, pulsing with nighttime energy"],
+    problema:["city lights flickering and going dark, the tension of a blackout",
+          "smoke from an old power plant contrasting with clean mountains behind"],
+    origen:["hands holding crystal-clear meltwater from a mountain glacier",
+          "sunrise over the summit, the first light as a metaphor for origin"],
+    cultura:["a diverse team of engineers sharing a blueprint in the open field",
+          "technicians fist-bumping after completing a mountain installation"],
+    valores:["a female engineer looking at the horizon with confidence, wind in her hair",
+          "close-up of a hand adjusting a solar panel with precision, sky reflected"],
+    marca:["a hydroelectric dam releasing water, mist catching the golden light",
+          "a solar field stretching to the mountain, mirroring the sky",
+          "wide shot of a wind farm on a plateau, blades turning in sync"],
+    diferencial:["an engineer with a tablet in front of a wind turbine, reading live data",
+          "a modern control room, screens showing energy maps and green flows",
+          "a technician climbing a turbine, heroic shot backlit by the sunrise"],
+    demostracion:["water rushing down the penstock pipe, pure kinetic energy",
+          "turbine blades spinning in close-up, sun flares breaking between them",
+          "an animated energy flow traveling from the mountain to homes"],
+    impacto:["a family switching on the lights of their home at dusk, warm and safe",
+          "children playing in the square of a lit village at the foot of the mountain",
+          "aerial of a connected community, warm lights dotting the valley"],
+    cierre:["the brand logo forms over the summit lit by sunrise",
+          "the tagline appears over a majestic aerial of the mountain range at dawn"]
+  };
+
+  const CAMERA = {
+    cinematografico:["dolly-in lento","grúa ascendente","órbita suave","steadicam fluido","tilt-up revelador"],
+    corporativo:["dolly-in suave","plano fijo en trípode","paneo lateral controlado","push-in leve"],
+    energetico:["travelling rápido","whip pan","dron en push-in veloz","cenital con giro","handheld dinámico"],
+    minimalista:["plano fijo","push-in muy lento","tilt-up mínimo","encuadre estático simétrico"],
+    documental:["handheld observacional","paneo de seguimiento","plano fijo con foco selectivo"],
+    premium:["dolly-in lento","órbita cinematográfica","macro con rack focus","grúa descendente"]
+  };
+  const CAMERA_EN = {
+    cinematografico:["slow dolly-in","rising crane","gentle orbit","fluid steadicam","revealing tilt-up"],
+    corporativo:["soft dolly-in","locked tripod shot","controlled side pan","subtle push-in"],
+    energetico:["fast tracking shot","whip pan","fast drone push-in","top-down with spin","dynamic handheld"],
+    minimalista:["locked static shot","very slow push-in","minimal tilt-up","symmetric static frame"],
+    documental:["observational handheld","following pan","static shot with selective focus"],
+    premium:["slow dolly-in","cinematic orbit","macro with rack focus","descending crane"]
+  };
+  const LIGHT_ES=["hora dorada, contraluz cálido","luz natural difusa y suave","alto contraste con sombras profundas",
+    "luz azul del amanecer con acentos ámbar","luz volumétrica atravesando neblina"];
+  const LIGHT_EN=["golden hour, warm backlight","soft diffused natural light","high contrast with deep shadows",
+    "cool dawn blue with amber accents","volumetric light through haze"];
+
+  const VO = {
+    es:{hook:"¿De dónde viene la energía que mueve tu mundo?",
+        contexto:"Cada hogar, cada ciudad, necesita una fuerza que no se agote.",
+        problema:"El planeta ya no puede esperar por energía más limpia.",
+        origen:"Todo empieza donde el aire es más puro: en las alturas.",
+        cultura:"Somos las personas que hacen posible la energía del futuro.",
+        valores:"Renovable. Confiable. Responsable con cada comunidad.",
+        marca:"Nace {marca}. Energía que baja desde las alturas.",
+        diferencial:"Energía renovable e inteligente, gestionada en tiempo real.",
+        demostracion:"De la montaña a tu hogar, sin apagar el planeta.",
+        impacto:"Iluminamos comunidades enteras con energía limpia.",
+        cierre:"{marca}. {tagline}."},
+    en:{hook:"Where does the energy that moves your world come from?",
+        contexto:"Every home, every city, needs a force that never runs out.",
+        problema:"The planet can't wait any longer for cleaner energy.",
+        origen:"It all begins where the air is purest: at the heights.",
+        cultura:"We are the people making the energy of the future possible.",
+        valores:"Renewable. Reliable. Responsible to every community.",
+        marca:"Introducing {marca}. Energy that comes down from the heights.",
+        diferencial:"Renewable, intelligent energy, managed in real time.",
+        demostracion:"From the mountain to your home, without switching off the planet.",
+        impacto:"We light up entire communities with clean energy.",
+        cierre:"{marca}. {tagline}."}
+  };
+  const KICKER = {
+    es:{hook:"",contexto:"El mundo funciona con energía",problema:"El reto",origen:"Nuestro origen",
+        cultura:"Nuestra gente",valores:"Nuestros valores",marca:"{marca}",diferencial:"Energía inteligente",
+        demostracion:"En acción",impacto:"Para las comunidades",cierre:"{tagline}"},
+    en:{hook:"",contexto:"The world runs on energy",problema:"The challenge",origen:"Our origin",
+        cultura:"Our people",valores:"Our values",marca:"{marca}",diferencial:"Smart energy",
+        demostracion:"In action",impacto:"For communities",cierre:"{tagline}"}
+  };
+
+  /* ---------- construir arco de beats según nº de escenas ---------- */
+  function buildArc(type,n){
+    const base = (BEATS[type]||BEATS.lanzamiento).slice();
+    // dedup manteniendo orden para la base de referencia
+    const seen=[]; const ref=[];
+    base.forEach(b=>{ ref.push(b); });
+    if(n>=ref.length){
+      const arc=ref.slice();
+      let i=0;
+      while(arc.length<n){
+        arc.splice(arc.length-1,0,EXPAND[i%EXPAND.length]);
+        i++;
+      }
+      return arc.slice(0,n);
+    }
+    // acortar: siempre hook (primero) y cierre (último)
+    const first=ref[0], last=ref[ref.length-1];
+    const middlePool=ref.slice(1,-1);
+    const priority = middlePool.slice().sort((a,b)=>{
+      const ka=KEEP.includes(a)?0:1, kb=KEEP.includes(b)?0:1; return ka-kb;
+    });
+    const keepMiddle = priority.slice(0,Math.max(0,n-2));
+    // reordenar según orden original
+    const orderedMiddle = middlePool.filter(b=>keepMiddle.includes(b));
+    return [first,...orderedMiddle,last].slice(0,n);
+  }
+
+  function pick(arr,i){return arr[((i%arr.length)+arr.length)%arr.length];}
+  function fill(s,d){return (s||"").replace(/\{marca\}/g,d.marca).replace(/\{tagline\}/g,d.tagline);}
+
+  function sceneCount(dur,style){
+    const per={cinematografico:6.5,corporativo:5,energetico:3.6,minimalista:6,documental:5.5,premium:6}[style]||5;
+    return Math.max(4,Math.min(40,Math.round(dur/per)));
+  }
+  // reparte la duración total entre escenas con pesos por beat
+  function durations(total,arc){
+    const w=arc.map(b=> b==="hook"?0.8 : b==="cierre"?1.15 : b==="marca"?1.2 : b==="impacto"?1.1 : 1);
+    const W=w.reduce((a,x)=>a+x,0);
+    let raw=w.map(x=> total*x/W);
+    let out=raw.map(x=>Math.max(1.5,Math.round(x*10)/10));
+    // ajustar para que sume exacto
+    let diff=Math.round((total-out.reduce((a,x)=>a+x,0))*10)/10;
+    out[out.length-1]=Math.max(1.5,Math.round((out[out.length-1]+diff)*10)/10);
+    return out;
+  }
+
+  /* ---------- generar datos ---------- */
+  function build(){
+    const d={
+      concepto:$("#concepto").value.trim(),
+      tipo:$("#tipo").value,
+      dur:parseInt($("#duracion").value,10),
+      formato:$("#formato").value,
+      plataforma:$("#formato").selectedOptions[0].dataset.plat,
+      estilo,
+      motor:$("#motor").value,
+      idioma:$("#idioma").value,
+      voz:$("#tgVoz").checked, mus:$("#tgMus").checked, txt:$("#tgTxt").checked,
+      marca:$("#marca").value.trim()||"ALTO MONTE",
+      tagline:$("#tagline").value.trim(),
+      c1:$("#c1").value, c2:$("#c2").value, c3:$("#c3").value
+    };
+    const L=d.idioma;
+    const arc=buildArc(d.tipo,sceneCount(d.dur,d.estilo));
+    const durs=durations(d.dur,arc);
+    const VIS=L==="en"?VISUAL_EN:VISUAL_ES;
+    const CAM=L==="en"?CAMERA_EN:CAMERA;
+    const LIG=L==="en"?LIGHT_EN:LIGHT_ES;
+
+    const scenes=arc.map((beat,i)=>({
+      n:i+1, beat,
+      label:BEAT_LABEL[beat]||beat,
+      shot:SHOT[beat]||"Plano medio",
+      dur:durs[i],
+      visual:pick(VIS[beat]||VIS.marca,i),
+      camera:pick((CAM[d.estilo]||CAM.corporativo),i+1),
+      light:pick(LIG,i+2),
+      vo: d.voz ? fill(VO[L][beat],d) : null,
+      kicker: d.txt ? fill(KICKER[L][beat],d) : null
+    }));
+    return {d,scenes};
+  }
+
+  /* ---------- render guion ---------- */
+  function renderGuion(model){
+    const {d,scenes}=model;
+    const lbl=d.idioma==="en"
+      ? {plano:"Encuadre",cam:"Cámara",luz:"Luz",vo:"Locución",txt:"En pantalla"}
+      : {plano:"Encuadre",cam:"Cámara",luz:"Luz",vo:"Locución",txt:"En pantalla"};
+    let h=`<div class="meta">
+      <span class="pill">Escenas <b>${scenes.length}</b></span>
+      <span class="pill">Total <b>${d.dur}s</b></span>
+      <span class="pill">Formato <b>${d.formato}</b></span>
+      <span class="pill">${d.plataforma}</span>
+      <span class="pill">Estilo <b>${d.estilo}</b></span>
+    </div><div class="timeline">`;
+    scenes.forEach(s=>{
+      h+=`<div class="scene rise">
+        <div class="s-head"><span class="s-no">${String(s.n).padStart(2,"0")}</span>
+          <span class="s-beat">${s.label}</span><span class="s-dur">${s.dur}s</span></div>
+        <p class="s-desc">${s.visual.charAt(0).toUpperCase()+s.visual.slice(1)}.</p>
+        <div class="s-grid">
+          <div class="s-row"><span class="k">${lbl.plano}</span><span class="v">${s.shot}</span></div>
+          <div class="s-row"><span class="k">${lbl.cam}</span><span class="v">${s.camera}</span></div>
+          <div class="s-row"><span class="k">${lbl.luz}</span><span class="v">${s.light}</span></div>`;
+      if(s.vo) h+=`<div class="s-row"><span class="k">${lbl.vo}</span><span class="v">"${s.vo}"</span></div>`;
+      if(s.kicker) h+=`<div class="s-row"><span class="k">${lbl.txt}</span><span class="v">${s.kicker}</span></div>`;
+      h+=`</div></div>`;
+    });
+    h+=`</div><div class="actions">
+      <button class="btn" id="copyGuion">⧉ Copiar guion</button>
+      <button class="btn" id="dlGuion">↓ Descargar .txt</button></div>`;
+    $("#tab-guion").innerHTML=h;
+    $("#copyGuion").onclick=e=>copy(e.target,guionText(model));
+    $("#dlGuion").onclick=()=>download(`guion_${slug(d.marca)}_${d.dur}s.txt`,guionText(model));
+  }
+
+  function guionText(m){
+    const {d,scenes}=m;
+    let t=`GUION · ${d.marca} — ${d.tipo.toUpperCase()}\n${d.tagline}\n`;
+    t+=`Duración ${d.dur}s · ${scenes.length} escenas · ${d.formato} (${d.plataforma}) · estilo ${d.estilo}\n`;
+    t+=`Concepto: ${d.concepto}\n${"=".repeat(56)}\n\n`;
+    scenes.forEach(s=>{
+      t+=`ESCENA ${String(s.n).padStart(2,"0")} · ${s.label} · ${s.dur}s\n`;
+      t+=`  Visual : ${s.visual}\n  Encuadre: ${s.shot}\n  Cámara : ${s.camera}\n  Luz    : ${s.light}\n`;
+      if(s.vo) t+=`  VO     : "${s.vo}"\n`;
+      if(s.kicker) t+=`  Texto  : ${s.kicker}\n`;
+      t+=`\n`;
+    });
+    return t;
+  }
+
+  /* ---------- render prompt (por motor) ---------- */
+  const ASPECT={ "9:16":"9:16 vertical","1:1":"1:1 square","16:9":"16:9 widescreen","4:5":"4:5 vertical"};
+  function styleTokens(d){
+    const map={cinematografico:"cinematic commercial film",corporativo:"clean corporate film",
+      energetico:"high-energy dynamic ad",minimalista:"minimalist elegant film",
+      documental:"documentary style",premium:"premium luxury commercial"};
+    return `${map[d.estilo]}, brand color grade of energy green ${d.c1} and sunrise amber ${d.c2}, `
+      +`deep contrast, volumetric light, golden-hour highlights on mountain terrain, `
+      +`shallow depth of field, 4K, filmic, professional`;
+  }
+  const NEG="no on-screen text artifacts, no distorted faces, no warped logos, no extra limbs, "
+    +"no watermark, no oversaturation, no flicker, no low resolution";
+
+  function scenePromptEN(s,d){
+    // reconstruye la versión EN del visual para el prompt aunque el guion esté en ES
+    const visEN = pick(VISUAL_EN[s.beat]||VISUAL_EN.marca, s.n-1);
+    const camEN = pick(CAMERA_EN[d.estilo]||CAMERA_EN.corporativo, s.n);
+    const ligEN = pick(LIGHT_EN, s.n+1);
+    return {vis:visEN,cam:camEN,lig:ligEN};
+  }
+
+  function buildPrompt(model){
+    const {d,scenes}=model;
+    const asp=ASPECT[d.formato], tok=styleTokens(d), m=d.motor;
+    const head=`// ${d.marca} — ${d.tipo} · ${d.dur}s · ${asp} · engine: ${m}\n`
+      +`// MASTER STYLE (repite en cada clip para consistencia):\n`
+      +`${tok}. Aspect ratio ${asp}.\n`;
+    let body="";
+
+    if(m==="sora"||m==="veo"){
+      body=scenes.map(s=>{
+        const e=scenePromptEN(s,d);
+        let line=`Scene ${s.n} (${s.dur}s): ${e.cam} — ${e.vis}. Lighting: ${e.lig}. ${tok}.`;
+        if(m==="veo" && (d.voz||d.mus)){
+          const a=[]; if(d.mus) a.push("subtle uplifting cinematic score");
+          if(d.voz && s.vo) a.push(`voiceover: "${fill(VO.en[s.beat],d)}"`);
+          line+=` Audio: ${a.join("; ")}.`;
+        }
+        return line;
+      }).join("\n\n");
+    } else if(m==="runway"||m==="luma"){
+      body=scenes.map(s=>{const e=scenePromptEN(s,d);
+        return `Shot ${s.n} [${s.dur}s]: ${e.cam}, ${s.shot.toLowerCase()} of ${e.vis}, ${e.lig}. ${tok}.`;
+      }).join("\n\n");
+    } else if(m==="kling"||m==="pika"||m==="hailuo"){
+      body=scenes.map(s=>{const e=scenePromptEN(s,d);
+        return `Clip ${s.n} (${s.dur}s): ${e.vis}, ${e.cam}, ${e.lig}, ${tok}.\n  --neg ${NEG}`;
+      }).join("\n\n");
+    } else { // oreate — guion + estilo
+      const script=scenes.filter(s=>s.vo).map(s=>fill(VO[d.idioma][s.beat],d)).join(" ");
+      body=`STYLE: ${tok}. Aspect ${asp}.\n\nSCRIPT (voiceover):\n${script||"(sin locución)"}\n\n`
+        +`SHOTLIST:\n`+scenes.map(s=>{const e=scenePromptEN(s,d);
+          return `${s.n}. [${s.dur}s] ${e.vis} — ${e.cam}, ${e.lig}`;}).join("\n");
+    }
+
+    const tips = d.idioma==="en"
+      ? `\n\n// TIP: keep the same seed and re-use the MASTER STYLE line on every clip. Upload a reference frame if the engine allows it. Generate clip by clip and edit in sequence.`
+      : `\n\n// TIP: usa el mismo seed y repite la línea MASTER STYLE en cada clip. Sube un frame de referencia si el motor lo permite. Genera clip por clip y edítalos en secuencia.`;
+    return head+"\n"+body+tips;
+  }
+
+  function renderPrompt(model){
+    const {d}=model;
+    const txt=buildPrompt(model);
+    const noteEs=`Prompt generado en inglés (mejor rendimiento en Sora, Veo, Runway y Kling). El guion y la locución respetan el idioma elegido. Cambia el motor para reformatear el prompt.`;
+    const note = d.idioma==="en"
+      ? `Prompt built in English for best engine performance. Switch the engine to reformat. The style line keeps every clip visually consistent.`
+      : noteEs;
+    const esc=txt.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+      .replace(/^(\/\/.*)$/gm,'<span class="cm">$1</span>');
+    $("#tab-prompt").innerHTML=`<div class="prompt-note">${note}</div>`
+      +`<pre class="code">${esc}</pre>`
+      +`<div class="actions">
+          <button class="btn" id="copyPrompt">⧉ Copiar prompt</button>
+          <button class="btn" id="dlPrompt">↓ Descargar .txt</button></div>`;
+    $("#copyPrompt").onclick=e=>copy(e.target,txt);
+    $("#dlPrompt").onclick=()=>download(`prompt_${slug(d.marca)}_${d.motor}.txt`,txt);
+  }
+
+  /* ---------- utils ---------- */
+  function slug(s){return (s||"marca").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+  function copy(btn,text){
+    navigator.clipboard.writeText(text).then(()=>{
+      const o=btn.textContent; btn.classList.add("copied"); btn.textContent="✓ Copiado";
+      setTimeout(()=>{btn.classList.remove("copied");btn.textContent=o;},1400);
+    }).catch(()=>{});
+  }
+  function download(name,text){
+    const b=new Blob([text],{type:"text/plain"}), u=URL.createObjectURL(b);
+    const a=document.createElement("a"); a.href=u; a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(u),500);
+  }
+
+  /* ---------- run ---------- */
+  function run(){const m=build(); renderGuion(m); renderPrompt(m);}
+  $("#form").addEventListener("submit",e=>{e.preventDefault(); run();});
+  run(); // primera carga con el ejemplo
+})();
+</script>
+</body>
+</html>
