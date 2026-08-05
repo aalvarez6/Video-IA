@@ -1,56 +1,84 @@
- Motor de guion & prompt para video IA
+# ALTO MONTE · Sistema de video corporativo con IA
 
-App web para pasar de un **brief** a un **guion escena por escena** y a un **prompt optimizado**
-listo para pegar en tu motor de video IA (Sora, Veo 3, Runway, Kling, Pika, Luma, Hailuo, Oreate).
+Del brief al video, todo con material generado por IA.
 
-- Videos de **30 s a 5 min**.
-- Formatos **IG** (Reels 9:16, Feed 1:1 / 4:5) y **LinkedIn** (16:9, 1:1).
-- Tema **oscuro y minimalista**, con la identidad de ALTO MONTE.
-- Funciona **100% en el navegador**: sin cuentas, sin servidor, sin claves API.
+```
+App (brief) → guion.json → subir en la app → 3 preguntas → generación
+                                                    ↓
+                                        manifiesto → Colab → MP4 final
+```
 
 ## Archivos
 
 | Archivo | Qué es |
 |---|---|
-| `index.html` | La aplicación completa (todo el CSS y JS va incluido). |
-| `PROMPT-MAESTRO-ALTOMONTE.md` | El prompt de marca reutilizable, editable a mano. |
-| `README.md` | Este archivo. |
+| `index.html` | La app. Blanco y negro, lista para desplegar. |
+| `proxy-worker.js` | Proxy para que el navegador pueda llamar la API de video. |
+| `render_video_altomonte.ipynb` | Ensamblado final en Colab: escenas + voz + música → MP4. |
+| `PROMPT-MAESTRO-ALTOMONTE.md` | Prompt de marca reutilizable. |
 
-## Usarla en local
+## La app
 
-Abre `index.html` con doble clic en cualquier navegador. Eso es todo.
+**Pestaña Guion.** Escribe el concepto y genera el desglose escena por escena.
+El prompt **no se muestra en pantalla**: queda en un panel colapsable bajo «Revisar»,
+con dos descargas — el prompt en texto y el archivo `.json` que alimenta la generación.
 
-## Desplegar (elige una)
+**Pestaña Generar.** Arrastra el `.json`. Al soltarlo aparecen **tres preguntas** y,
+al confirmar, la generación arranca sola:
 
-Como es un sitio estático, se publica sin configuración:
+1. **¿Qué generamos?** Imágenes con movimiento (sin costo) · Video en escenas clave · Video en todas
+2. **¿Cuántas escenas?** Solo las tres primeras (prueba) · Todas
+3. **¿Consistencia visual?** Semilla fija · Semilla variada
 
-**Netlify (arrastrar y soltar):**
-1. Entra a https://app.netlify.com/drop
-2. Arrastra la carpeta con `index.html`. Listo, te da una URL pública.
+Las tres preguntas existen para que una corrida completa nunca se dispare por accidente:
+28 escenas en video real cuestan dinero, tres imágenes de prueba no cuestan nada.
 
-**Vercel:**
-1. Sube estos archivos a un repositorio de GitHub.
-2. En https://vercel.com → *Add New Project* → importa el repo → *Deploy*.
-   No hace falta framework ni build; detecta el sitio estático.
+## Diseño
 
-**GitHub Pages:**
-1. Sube los archivos a un repo.
-2. *Settings → Pages → Deploy from branch* → `main` / `root`.
+Negro puro, tipografía del sistema, retículas de una sola línea y mucho aire.
+El **verde aparece solo en estados** — la barra de progreso y los interruptores activos —
+nunca como decoración. Así el color significa «esto está pasando» en vez de ser un adorno,
+y el blanco y negro se mantiene limpio.
 
-## Cómo se usa
+## Conexión con la API de terceros
 
-1. Escribe el **concepto** del video.
-2. Ajusta **tipo, duración, formato, motor, estilo e idioma**.
-3. Activa/desactiva **locución, música y texto en pantalla**.
-4. Pulsa **Generar**. Obtienes dos pestañas:
-   - **Guion por escenas:** desglose con encuadre, cámara, luz, locución y texto.
-   - **Prompt IA:** el prompt formateado para el motor elegido, con nota de consistencia.
-5. **Copia o descarga** cada uno y pégalo en tu motor de video.
+Las imágenes se generan sin clave. Para clips de video, en **Ajustes de conexión** defines:
 
-## Notas
+- **Endpoint** y **clave** de tu proveedor
+- **Encabezado** y **prefijo** (por defecto `Authorization` / `Bearer `)
+- **Cuerpo de la petición**, con `{{prompt}}`, `{{aspect}}` y `{{seconds}}`
 
-- El prompt se genera en **inglés** porque Sora, Veo, Runway y Kling rinden mejor así;
-  el guion y la locución respetan el idioma que elijas.
-- Cambia el **motor** para reformatear el prompt (cada uno usa una estructura distinta).
-- Para publicar en varios formatos, genera de nuevo cambiando el **formato**.
-- La paleta, la marca y el tagline son editables desde el propio panel.
+La respuesta se explora sola buscando la dirección del clip. Si el proveedor devuelve
+un trabajo pendiente, la app consulta hasta que esté listo. La clave vive solo en la
+pestaña abierta: no se guarda en ningún lado.
+
+### El proxy no es opcional en la práctica
+
+Casi todos los proveedores rechazan las peticiones hechas desde un navegador (CORS).
+Si ves ese error, despliega `proxy-worker.js`:
+
+1. dash.cloudflare.com → Workers & Pages → Create → Worker
+2. Pega el archivo y publica
+3. En la app, campo Proxy: `https://tu-worker.workers.dev/?url=`
+
+El proxy solo reenvía a los dominios de su lista `ALLOW`. Agrega el de tu proveedor
+y cambia `ORIGIN` por tu dominio cuando publiques.
+
+## Por qué el ensamblado final sigue en Colab
+
+El navegador genera bien las escenas una por una, pero unir 28 clips con locución y
+música es mucho más estable en el notebook, que ya está probado y produce el MP4
+con voz femenina colombiana y música original.
+
+## Desplegar
+
+Sitio estático, sin build:
+
+- **Netlify:** arrastra la carpeta a https://app.netlify.com/drop
+- **Vercel:** sube a GitHub → Add New Project → importa → Deploy
+- **GitHub Pages:** Settings → Pages → Deploy from branch → `main` / `root`
+
+## Pendiente
+
+Cuando tengas el logo en PNG y la tipografía de ALTO MONTE, se reemplazan la fuente
+del notebook y el cierre del video con la marca real.
