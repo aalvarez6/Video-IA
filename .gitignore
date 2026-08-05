@@ -1,0 +1,41 @@
+# ---- Basura del sistema operativo ----
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+desktop.ini
+
+# ---- Editores ----
+.vscode/
+.idea/
+*.swp
+
+# ---- Dependencias ----
+node_modules/
+package-lock.json
+
+# ---- Secretos: NUNCA subir claves de API ----
+.env
+.env.local
+*.key
+secrets.json
+config.local.js
+
+# ---- Salidas de video y audio (pesan mucho) ----
+*.mp4
+*.mov
+*.webm
+*.wav
+*.mp3
+frames/
+work/
+outputs/
+
+# ---- Archivos generados por la app ----
+manifiesto-*.json
+guion-*.json
+guion-*.txt
+prompt-*.txt
+
+# ---- Notebooks: checkpoints de Colab/Jupyter ----
+.ipynb_checkpoints/
